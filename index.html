@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f3ead5">
+<meta name="description" content="일상생활에서 자주 보는 한자를 손가락으로 따라 쓰고 채점받는 연습 앱">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="생활한자">
+<title>생활한자 따라쓰기</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preload" href="fonts/NotoSerifKR-subset.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* 앱에 함께 넣은 한자 글꼴 (오프라인에서도 본보기·채점 기준이 같도록) */
+  @font-face{font-family:"Noto Serif KR";src:url(fonts/NotoSerifKR-subset.woff2) format("woff2");font-weight:200 900;font-display:block}
+  :root{
+    --paper:#fbf6ea; --paper2:#f3ead5; --ink:#1d1a16; --muted:#7a6f5d;
+    --red:#b8322a; --red-soft:rgba(184,50,42,.28); --line:#e2d5b8;
+    --accent:#2f5d50; --accent2:#e8f0ec; --done:#2f7d4f; --card:#fffdf7;
+    --serif:"Noto Serif KR","Batang","바탕","Noto Serif CJK KR",serif;
+    --safeB:env(safe-area-inset-bottom,0px); --safeT:env(safe-area-inset-top,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overscroll-behavior:none}
+  body{background:var(--paper);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+       -webkit-user-select:none;user-select:none}
+  button{font:inherit;cursor:pointer;touch-action:manipulation;color:inherit}
+
+  header{position:sticky;top:0;z-index:5;background:var(--paper2);border-bottom:1px solid var(--line);padding:calc(8px + var(--safeT)) 12px 8px}
+  .hrow{display:flex;align-items:center;gap:10px}
+  header h1{margin:0;font-family:var(--serif);font-size:18px;flex:1;letter-spacing:1px}
+  header h1 span{color:var(--red)}
+  .icon{border:1px solid var(--line);background:var(--card);border-radius:10px;width:40px;height:40px;font-size:18px}
+  .prog{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .bar{flex:1;height:6px;background:#e6dcc4;border-radius:3px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--done);transition:width .3s}
+  .prog b{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+
+  main{padding:10px 12px calc(84px + var(--safeB));display:flex;flex-direction:column;gap:10px;align-items:center}
+
+  .strip{display:flex;align-items:center;gap:6px;width:100%;justify-content:center}
+  #cat{font-size:11px;color:var(--accent);font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 8px;background:var(--accent2);white-space:nowrap}
+  #strip{display:flex;gap:5px}
+  .cell{width:48px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:2px 0 4px;text-align:center}
+  .cell .c{font-family:var(--serif);font-size:24px;line-height:1.25}
+  .cell .e{font-size:11px;color:var(--muted)}
+  .cell.on{border-color:var(--red);box-shadow:0 0 0 2px var(--red-soft)}
+  .cell.ok .c{color:var(--done)}
+  #sayPhrase{width:44px;height:52px;border:1px solid var(--line);background:var(--card);border-radius:10px;font-size:18px}
+
+  .model{display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 12px}
+  .model .big{font-family:var(--serif);font-size:56px;line-height:1.1;min-width:64px;text-align:center}
+  .model .big.q{color:#cbbf9f}
+  .model .info{flex:1;min-width:0}
+  .model .hun{font-size:20px;font-weight:700}
+  .model .hun em{font-style:normal;color:var(--red)}
+  .model .meta{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .model .acts{display:flex;flex-direction:column;gap:6px}
+  .chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 10px;font-size:12px;white-space:nowrap}
+
+  .seg{display:flex;width:100%;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+  .seg button{flex:1;border:0;background:transparent;padding:10px 4px;font-size:14px;font-weight:700;color:var(--muted)}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--accent);color:#fff}
+  #modeHelp{font-size:12px;color:var(--muted);margin:-4px 0 0;text-align:center}
+
+  .board{position:relative;width:min(100%, calc(100vh - 360px));min-width:260px;max-width:560px;aspect-ratio:1;border-radius:6px;box-shadow:0 2px 10px rgba(60,40,10,.12)}
+  @supports (height:100dvh){ .board{width:min(100%, calc(100dvh - 360px))} }
+  .board canvas{position:absolute;inset:0;width:100%;height:100%}
+  #ink{touch-action:none}
+  #result{min-height:22px;font-weight:700;font-size:16px;text-align:center}
+  #result small{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:2px}
+
+  .dock{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--paper2);border-top:1px solid var(--line);
+        display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr 1fr;gap:6px;padding:8px 8px calc(8px + var(--safeB))}
+  .dock button{border:1px solid var(--line);background:var(--card);border-radius:12px;height:52px;font-size:12px;font-weight:700;
+               display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .dock button b{font-size:18px;line-height:1}
+  .dock .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .dock button:active{transform:scale(.96)}
+
+  /* 시트 (목록 / 설정) */
+  .dim{position:fixed;inset:0;background:rgba(30,20,5,.35);z-index:20;display:none}
+  .dim.open{display:block}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--paper);border-radius:18px 18px 0 0;
+         box-shadow:0 -6px 24px rgba(0,0,0,.15);transform:translateY(105%);transition:transform .25s ease;
+         display:flex;flex-direction:column;padding-bottom:var(--safeB)}
+  .sheet.open{transform:none}
+  .sheet .grab{width:40px;height:4px;border-radius:2px;background:#d7c9a8;margin:8px auto 4px}
+  .sheet .shead{display:flex;align-items:center;padding:4px 14px 8px}
+  .sheet .shead h2{flex:1;margin:0;font-size:16px}
+  #aside{height:85vh}
+  @supports (height:100dvh){ #aside{height:85dvh} }
+  .search{padding:0 12px 8px;display:flex;gap:6px}
+  .search input{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:16px;min-width:0;-webkit-user-select:text;user-select:text}
+  .search select{border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:14px;padding:0 6px;max-width:34%}
+  #list{overflow:auto;flex:1;padding:0 8px 12px;-webkit-overflow-scrolling:touch}
+  #list h3{font-size:13px;color:var(--accent);margin:14px 8px 4px;padding-bottom:4px;border-bottom:2px solid var(--accent2)}
+  .ph{display:flex;align-items:center;gap:10px;padding:9px 8px;border-bottom:1px solid #efe5cf}
+  .ph.cur{background:var(--accent2);border-radius:10px}
+  .ph .cs{font-family:var(--serif);font-size:24px;letter-spacing:3px;white-space:nowrap}
+  .ph .cs s{text-decoration:none}
+  .ph .cs s.ok{color:var(--done)}
+  .ph .rd{margin-left:auto;text-align:right;font-size:14px;font-weight:700;min-width:0}
+  .ph .rd small{display:block;font-size:11px;font-weight:400;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #settings .body{padding:0 16px 18px;display:flex;flex-direction:column;gap:16px}
+  label.row{display:flex;align-items:center;gap:10px;font-size:14px}
+  label.row span{width:80px;color:var(--muted)}
+  label.row input[type=range]{flex:1;height:28px}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px}
+  .chk input{width:20px;height:20px}
+  .wide{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px;font-weight:700}
+  .stats{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
+  .help{font-size:12px;color:var(--muted)}
+
+  @media (min-width:700px){ main{max-width:640px;margin:0 auto} .sheet{max-width:640px;margin:0 auto} }
+  @media (orientation:landscape) and (max-height:500px){
+    main{display:grid;grid-template-columns:auto 1fr;align-items:start;gap:10px}
+    .board{width:calc(100vh - 150px);min-width:200px;grid-row:1 / span 5;grid-column:1}
+    .strip,.model,.seg,#modeHelp,#result{grid-column:2}
+    header .prog{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <button class="icon" id="menuBtn" aria-label="목록">☰</button>
+    <h1><span>生活漢字</span> 따라쓰기</h1>
+    <button class="icon" id="setBtn" aria-label="설정">⚙</button>
+  </div>
+  <div class="prog"><div class="bar"><i id="barFill"></i></div><b id="progTxt"></b></div>
+</header>
+
+<main>
+  <div class="strip">
+    <span id="cat"></span>
+    <div id="strip"></div>
+    <button id="sayPhrase" aria-label="낱말 듣기">🔊</button>
+  </div>
+
+  <div class="model">
+    <div class="big" id="big"></div>
+    <div class="info">
+      <div class="hun" id="hun"></div>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="acts">
+      <button class="chip" id="say">🔊 훈음</button>
+      <button class="chip" id="reveal">👁 정답</button>
+    </div>
+  </div>
+
+  <div class="seg" id="modes">
+    <button data-m="trace" class="on">따라쓰기</button>
+    <button data-m="copy">보고쓰기</button>
+    <button data-m="test">외워쓰기</button>
+  </div>
+  <p id="modeHelp"></p>
+
+  <div class="board" id="board">
+    <canvas id="bg"></canvas>
+    <canvas id="ink"></canvas>
+  </div>
+  <div id="result"></div>
+</main>
+
+<nav class="dock">
+  <button id="prev"><b>◀</b>이전</button>
+  <button id="undo"><b>↶</b>되돌리기</button>
+  <button id="clear"><b>✕</b>지우기</button>
+  <button id="grade" class="primary"><b>✔</b>채점하기</button>
+  <button id="next"><b>▶</b>다음</button>
+</nav>
+
+<div class="dim" id="dim"></div>
+
+<section class="sheet" id="aside">
+  <div class="grab"></div>
+  <div class="shead"><h2 id="listTitle">생활한자 낱말</h2><button class="icon" data-close aria-label="닫기">✕</button></div>
+  <div class="search">
+    <input id="q" placeholder="한자·훈·음·뜻 검색">
+    <select id="catSel"><option value="">모든 주제</option></select>
+    <select id="filter">
+      <option value="all">전체</option>
+      <option value="todo">미완료</option>
+      <option value="done">완료</option>
+    </select>
+  </div>
+  <div id="list"></div>
+</section>
+
+<section class="sheet" id="settings">
+  <div class="grab"></div>
+  <div class="shead"><h2>설정</h2><button class="icon" data-close aria-label="닫기">✕</button></div>
+  <div class="body">
+    <label class="row"><span>본보기 농도</span><input type="range" id="alpha" min="5" max="60" value="22"></label>
+    <label class="row"><span>붓 굵기</span><input type="range" id="brush" min="2" max="9" step="0.5" value="5"></label>
+    <label class="chk"><input type="checkbox" id="autoNext"> 70점 이상이면 자동으로 다음 글자</label>
+    <label class="chk"><input type="checkbox" id="vibe" checked> 채점할 때 진동</label>
+    <label class="chk"><input type="checkbox" id="awake" checked> 연습하는 동안 화면 켜 두기</label>
+    <button class="wide" id="rand">🎲 미완료 글자 무작위 연습</button>
+    <div class="stats" id="stats"></div>
+  </div>
+</section>
+
+<script>
+// 모바일 전용: 시트 열기/닫기, 진동, 스와이프 이동
+(() => {
+  const $id = id => document.getElementById(id);
+  const dim = $id('dim');
+  const sheets = [...document.querySelectorAll('.sheet')];
+  const closeAll = () => { sheets.forEach(s => s.classList.remove('open')); dim.classList.remove('open'); };
+  const open = id => { closeAll(); $id(id).classList.add('open'); dim.classList.add('open'); };
+  $id('setBtn').addEventListener('click', () => open('settings'));
+  $id('menuBtn').addEventListener('click', e => {
+    e.stopImmediatePropagation(); open('aside');
+    setTimeout(() => { const el = document.querySelector('#list .ph.cur'); if (el) el.scrollIntoView({ block: 'center' }); }, 260);
+  }, true);
+  dim.addEventListener('click', closeAll);
+  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeAll));
+  $id('list').addEventListener('click', e => { if (e.target.closest('[data-i]')) closeAll(); });
+  $id('rand').addEventListener('click', closeAll);
+  $id('grade').addEventListener('click', () => {
+    if ($id('vibe').checked && navigator.vibrate) navigator.vibrate(30);
+  });
+  // 그리는 동안 페이지 스크롤·당겨서 새로고침 방지
+  $id('ink').addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  // 본보기 카드를 좌우로 밀어 이전/다음 글자
+  let sx = null;
+  const card = document.querySelector('.model');
+  card.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+  card.addEventListener('touchend', e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx; sx = null;
+    if (Math.abs(dx) > 50) $id(dx < 0 ? 'next' : 'prev').click();
+  });
+})();
+</script>
+<script>
+// ───────── 생활한자 데이터 ─────────
+// "# 주제" 줄 아래에  한자|읽기|글자별 훈음|뜻  형식으로 한 낱말씩 적는다.
+// 훈음은 사전 대표음(女=계집 녀), 읽기는 실제 소리(子女=자녀)로 적는다.
+const RAW = `
+# 숫자
+一二三四五|일이삼사오|한 일,두 이,석 삼,넉 사,다섯 오|숫자 1~5
+六七八九十|육칠팔구십|여섯 륙,일곱 칠,여덟 팔,아홉 구,열 십|숫자 6~10
+百千萬|백천만|일백 백,일천 천,일만 만|백, 천, 만
+# 요일·날짜
+月火水木|월화수목|달 월,불 화,물 수,나무 목|월·화·수·목요일
+金土日|금토일|쇠 금,흙 토,날 일|금·토·일요일
+年月日|연월일|해 년,달 월,날 일|해와 달과 날, 날짜
+今日|금일|이제 금,날 일|오늘
+明日|명일|밝을 명,날 일|내일
+每日|매일|매양 매,날 일|날마다
+休日|휴일|쉴 휴,날 일|쉬는 날
+生日|생일|날 생,날 일|태어난 날
+週末|주말|돌 주,끝 말|한 주의 끝 무렵
+午前|오전|낮 오,앞 전|낮 열두 시 이전
+午後|오후|낮 오,뒤 후|낮 열두 시 이후
+時間|시간|때 시,사이 간|어떤 때부터 어떤 때까지
+春夏秋冬|춘하추동|봄 춘,여름 하,가을 추,겨울 동|봄·여름·가을·겨울
+# 방향·크기
+東西南北|동서남북|동녘 동,서녘 서,남녘 남,북녘 북|네 방위
+上下左右|상하좌우|윗 상,아래 하,왼 좌,오른 우|위·아래·왼쪽·오른쪽
+前後|전후|앞 전,뒤 후|앞과 뒤
+內外|내외|안 내,바깥 외|안과 밖
+大中小|대중소|큰 대,가운데 중,작을 소|큰 것·중간·작은 것
+# 사람·가족
+人口|인구|사람 인,입 구|한 지역에 사는 사람의 수
+男女|남녀|사내 남,계집 녀|남자와 여자
+父母|부모|아비 부,어미 모|아버지와 어머니
+兄弟|형제|형 형,아우 제|형과 아우
+子女|자녀|아들 자,계집 녀|아들과 딸
+祖父母|조부모|할아비 조,아비 부,어미 모|할아버지와 할머니
+家族|가족|집 가,겨레 족|한 집안의 식구
+親舊|친구|친할 친,예 구|오래 사귄 가까운 사람
+老人|노인|늙을 로,사람 인|나이가 많은 사람
+先生|선생|먼저 선,날 생|가르치는 사람
+學生|학생|배울 학,날 생|배우는 사람
+# 몸·건강
+手足|수족|손 수,발 족|손과 발
+耳目口鼻|이목구비|귀 이,눈 목,입 구,코 비|귀·눈·입·코, 얼굴 생김새
+心身|심신|마음 심,몸 신|마음과 몸
+健康|건강|굳셀 건,편안 강|몸과 마음이 튼튼함
+# 자연·날씨
+天地|천지|하늘 천,땅 지|하늘과 땅
+山川|산천|메 산,내 천|산과 내, 자연
+海水|해수|바다 해,물 수|바닷물
+花草|화초|꽃 화,풀 초|꽃이 피는 풀과 나무
+草木|초목|풀 초,나무 목|풀과 나무
+風雨|풍우|바람 풍,비 우|바람과 비
+白雪|백설|흰 백,눈 설|하얀 눈
+日氣|일기|날 일,기운 기|그날그날의 날씨
+# 학교·공부
+學校|학교|배울 학,학교 교|배우는 곳
+敎室|교실|가르칠 교,집 실|수업을 하는 방
+工夫|공부|장인 공,지아비 부|배우고 익힘
+讀書|독서|읽을 독,글 서|책을 읽음
+國語|국어|나라 국,말씀 어|우리나라의 말
+數學|수학|셈 수,배울 학|수와 셈을 다루는 학문
+漢字|한자|한수 한,글자 자|중국에서 만들어진 글자
+文字|문자|글월 문,글자 자|말을 적는 글자
+問答|문답|물을 문,대답 답|묻고 대답함
+入學|입학|들 입,배울 학|학교에 들어감
+卒業|졸업|마칠 졸,업 업|학교 과정을 마침
+# 장소·건물
+食堂|식당|먹을 식,집 당|밥을 사 먹는 곳
+病院|병원|병 병,집 원|병을 고치는 곳
+藥局|약국|약 약,판 국|약을 짓고 파는 곳
+銀行|은행|은 은,다닐 행|돈을 맡기고 빌리는 곳
+市場|시장|저자 시,마당 장|물건을 사고파는 곳
+圖書館|도서관|그림 도,글 서,집 관|책을 모아 두고 읽는 곳
+會社|회사|모일 회,모일 사|돈을 벌려고 함께 일하는 곳
+空港|공항|빌 공,항구 항|비행기가 뜨고 내리는 곳
+住所|주소|살 주,바 소|사는 곳의 위치
+韓國|한국|나라 한,나라 국|우리나라
+大韓民國|대한민국|큰 대,나라 한,백성 민,나라 국|우리나라의 이름
+世界|세계|인간 세,지경 계|온 세상
+# 안내·표지판
+入口|입구|들 입,입 구|들어가는 곳
+出口|출구|날 출,입 구|나가는 곳
+非常口|비상구|아닐 비,떳떳할 상,입 구|급할 때 빠져나가는 문
+化粧室|화장실|될 화,단장할 장,집 실|용변을 보고 씻는 곳
+禁煙|금연|금할 금,연기 연|담배를 피우지 못함
+注意|주의|부을 주,뜻 의|마음에 새겨 조심함
+危險|위험|위태할 위,험할 험|해를 입을 수 있음
+安全|안전|편안 안,온전 전|위험하지 않음
+駐車場|주차장|머무를 주,수레 차,마당 장|차를 세워 두는 곳
+營業中|영업중|경영할 영,업 업,가운데 중|가게 문을 열고 장사하는 중
+案內|안내|책상 안,안 내|내용을 알려 줌
+出發|출발|날 출,필 발|길을 떠남
+到着|도착|이를 도,붙을 착|목적지에 다다름
+# 생활·물건
+電話|전화|번개 전,말씀 화|멀리 있는 사람과 말하는 기계
+電氣|전기|번개 전,기운 기|불을 켜고 기계를 움직이는 힘
+自動車|자동차|스스로 자,움직일 동,수레 차|엔진으로 달리는 차
+道路|도로|길 도,길 로|사람과 차가 다니는 길
+飮食|음식|마실 음,먹을 식|먹고 마시는 것
+牛乳|우유|소 우,젖 유|소의 젖
+衣服|의복|옷 의,옷 복|옷
+物件|물건|물건 물,물건 건|쓰려고 만든 것
+新聞|신문|새 신,들을 문|새 소식을 알리는 인쇄물
+旅行|여행|나그네 려,다닐 행|다른 곳을 다니며 구경함
+運動|운동|옮길 운,움직일 동|몸을 움직여 단련함
+音樂|음악|소리 음,노래 악|소리로 나타내는 예술
+平和|평화|평평할 평,화할 화|싸움 없이 평온함
+幸福|행복|다행 행,복 복|즐겁고 만족스러움
+感謝|감사|느낄 감,사례할 사|고맙게 여김`;
+
+const CHARS = [], PHRASES = [], CATS = [];
+let catNow = '';
+RAW.trim().split('\n').forEach(line => {
+  if (line.startsWith('#')) { catNow = line.slice(1).trim(); CATS.push(catNow); return; }
+  const [chars, read, hs, mean] = line.split('|');
+  const hus = hs.split(','), reads = [...read], pi = PHRASES.length, start = CHARS.length;
+  [...chars].forEach((ch, i) => {
+    const s = hus[i].trim(), k = s.lastIndexOf(' ');
+    CHARS.push({ ch, hun: s.slice(0, k), eum: s.slice(k + 1), say: reads[i], pi, idx: CHARS.length });
+  });
+  PHRASES.push({ chars, start, len: chars.length, read, mean, cat: catNow });
+});
+const TOTAL = CHARS.length;
+const idxsOf = p => Array.from({ length: p.len }, (_, i) => p.start + i);
+
+// ───────── 상태 ─────────
+const $ = s => document.querySelector(s);
+const FONT = `"Noto Serif KR","Batang","바탕","BatangChe","Noto Serif CJK KR","Source Han Serif K",serif`;
+const STORE = 'daily-hanja-progress-v1';
+let progress = {};
+try { progress = JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) {}
+const saveProgress = () => { try { localStorage.setItem(STORE, JSON.stringify(progress)); } catch (e) {} };
+const isDone = i => (progress[i]?.best || 0) >= 70;
+
+let cur = 0, mode = 'trace', revealed = false, strokes = [], drawing = null;
+try { cur = +localStorage.getItem(STORE + '-cur') || 0; mode = localStorage.getItem(STORE + '-mode') || 'trace'; } catch (e) {}
+if (!(cur >= 0 && cur < TOTAL)) cur = 0;
+
+const bg = $('#bg'), ink = $('#ink'), bctx = bg.getContext('2d'), ictx = ink.getContext('2d');
+let S = 0;
+
+// ───────── 캔버스 ─────────
+function resize() {
+  S = Math.floor($('#board').getBoundingClientRect().width);
+  const dpr = window.devicePixelRatio || 1;
+  for (const c of [bg, ink]) {
+    c.width = c.height = Math.round(S * dpr);
+    c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  drawBg(); redrawInk();
+}
+
+function drawGlyph(ctx, ch, s, color, strokeW = 0) {
+  ctx.save();
+  ctx.font = `${Math.round(s * 0.8)}px ${FONT}`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  const m = ctx.measureText(ch);
+  const w = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+  const h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  const x = (s - w) / 2 + m.actualBoundingBoxLeft;
+  const y = (s - h) / 2 + m.actualBoundingBoxAscent;
+  ctx.fillStyle = color; ctx.fillText(ch, x, y);
+  if (strokeW) { ctx.lineWidth = strokeW; ctx.lineJoin = 'round'; ctx.strokeStyle = color; ctx.strokeText(ch, x, y); }
+  ctx.restore();
+}
+
+function drawBg() {
+  const c = bctx, s = S;
+  c.clearRect(0, 0, s, s);
+  c.fillStyle = '#fffdf6'; c.fillRect(0, 0, s, s);
+  // 米字格 안내선
+  c.strokeStyle = 'rgba(184,50,42,.35)'; c.lineWidth = 1; c.setLineDash([6, 6]);
+  c.beginPath();
+  c.moveTo(s / 2, 0); c.lineTo(s / 2, s); c.moveTo(0, s / 2); c.lineTo(s, s / 2);
+  c.moveTo(0, 0); c.lineTo(s, s); c.moveTo(s, 0); c.lineTo(0, s);
+  c.stroke(); c.setLineDash([]);
+  c.strokeStyle = '#b8322a'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, s - 3, s - 3);
+
+  const ch = CHARS[cur].ch;
+  if (revealed) drawGlyph(c, ch, s, 'rgba(200,40,40,.35)');
+  else if (mode === 'trace') drawGlyph(c, ch, s, `rgba(0,0,0,${$('#alpha').value / 100})`);
+}
+
+// ───────── 붓 그리기 ─────────
+const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+function seg(ctx, pts, i, s, extra) {
+  const a = pts[i - 1], b = pts[i];
+  const pa = i > 1 ? mid(pts[i - 2], a) : a, mb = mid(a, b);
+  ctx.lineWidth = a.w * s + extra;
+  ctx.beginPath(); ctx.moveTo(pa.x * s, pa.y * s);
+  ctx.quadraticCurveTo(a.x * s, a.y * s, mb.x * s, mb.y * s); ctx.stroke();
+}
+function tail(ctx, pts, s, extra) {
+  const n = pts.length; if (n < 2) return;
+  const m = mid(pts[n - 2], pts[n - 1]);
+  ctx.lineWidth = pts[n - 1].w * s + extra;
+  ctx.beginPath(); ctx.moveTo(m.x * s, m.y * s); ctx.lineTo(pts[n - 1].x * s, pts[n - 1].y * s); ctx.stroke();
+}
+function dot(ctx, p, s, extra) {
+  ctx.beginPath(); ctx.arc(p.x * s, p.y * s, (p.w * s + extra) / 2, 0, Math.PI * 2); ctx.fill();
+}
+function setInk(ctx, color) {
+  ctx.strokeStyle = ctx.fillStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+}
+function renderStrokes(ctx, s, extra = 0, color = '#1d1a16') {
+  setInk(ctx, color);
+  for (const st of strokes) {
+    dot(ctx, st.pts[0], s, extra);
+    for (let i = 1; i < st.pts.length; i++) seg(ctx, st.pts, i, s, extra);
+    tail(ctx, st.pts, s, extra);
+  }
+}
+function redrawInk() { ictx.clearRect(0, 0, S, S); renderStrokes(ictx, S); }
+
+function pointOf(e, prev) {
+  const r = ink.getBoundingClientRect();
+  const p = { x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S, t: e.timeStamp };
+  const base = $('#brush').value / 100;
+  let f = 1;
+  if (prev) {
+    const dt = Math.max(1, p.t - prev.t);
+    const v = Math.hypot(p.x - prev.x, p.y - prev.y) * S / dt; // px/ms
+    f = Math.min(1.25, Math.max(0.45, 1.25 - v * 0.35));
+  }
+  if (e.pointerType === 'pen' && e.pressure > 0) f *= 0.4 + e.pressure * 1.2;
+  const target = base * f;
+  p.w = prev ? prev.w * 0.7 + target * 0.3 : base;
+  return p;
+}
+
+ink.addEventListener('pointerdown', e => {
+  e.preventDefault(); ink.setPointerCapture(e.pointerId);
+  const p = pointOf(e);
+  drawing = { pts: [p] }; strokes.push(drawing);
+  setInk(ictx, '#1d1a16'); dot(ictx, p, S, 0);
+});
+ink.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  setInk(ictx, '#1d1a16');
+  for (const ev of evs.length ? evs : [e]) {
+    const pts = drawing.pts, prev = pts[pts.length - 1];
+    const p = pointOf(ev, prev);
+    if (Math.hypot(p.x - prev.x, p.y - prev.y) * S < 1) continue;
+    pts.push(p); seg(ictx, pts, pts.length - 1, S, 0);
+  }
+});
+const endStroke = () => {
+  if (!drawing) return;
+  setInk(ictx, '#1d1a16'); tail(ictx, drawing.pts, S, 0);
+  drawing = null;
+};
+ink.addEventListener('pointerup', endStroke);
+ink.addEventListener('pointercancel', endStroke);
+
+// ───────── 채점 ─────────
+function mask(drawFn) {
+  const N = 160, c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  drawFn(ctx, N);
+  const d = ctx.getImageData(0, 0, N, N).data, m = new Uint8Array(N * N);
+  for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3] > 100 ? 1 : 0;
+  return m;
+}
+function grade() {
+  if (!strokes.length) { showResult('먼저 글자를 써 보세요.', ''); return; }
+  const ch = CHARS[cur].ch, tol = 0.06;
+  const G  = mask((c, N) => drawGlyph(c, ch, N, '#000'));
+  const Gd = mask((c, N) => drawGlyph(c, ch, N, '#000', N * tol));
+  const U  = mask((c, N) => renderStrokes(c, N, 0, '#000'));
+  const Ud = mask((c, N) => renderStrokes(c, N, N * tol, '#000'));
+  let g = 0, gHit = 0, u = 0, uHit = 0;
+  for (let i = 0; i < G.length; i++) {
+    if (G[i]) { g++; if (Ud[i]) gHit++; }
+    if (U[i]) { u++; if (Gd[i]) uHit++; }
+  }
+  const recall = g ? gHit / g : 0, precision = u ? uHit / u : 0;
+  const f1 = recall + precision ? 2 * recall * precision / (recall + precision) : 0;
+  const score = Math.round(Math.min(1, f1 * 1.12) * 100);
+
+  const rec = progress[cur] || { best: 0, tries: 0 };
+  rec.tries++; rec.best = Math.max(rec.best, score); rec.last = Date.now();
+  progress[cur] = rec; saveProgress();
+
+  const msg = score >= 90 ? '🎉 훌륭해요!' : score >= 75 ? '👍 잘 썼어요!' : score >= 55 ? '🙂 조금만 더!' : '✍️ 다시 해볼까요?';
+  const tip = recall < precision - 0.1 ? '빠진 획이 있어요. 본보기의 획을 모두 채워 보세요.'
+            : precision < recall - 0.1 ? '획이 본보기 밖으로 많이 나갔어요. 위치와 크기를 맞춰 보세요.'
+            : '획의 위치와 모양을 본보기와 비교해 보세요.';
+  showResult(`${msg} ${score}점`, `획 채움 ${Math.round(recall * 100)}% · 정확도 ${Math.round(precision * 100)}% — ${tip} (최고 ${rec.best}점)`);
+
+  revealed = true; drawBg(); renderAll();
+  if ($('#autoNext').checked && score >= 70 && cur < TOTAL - 1) setTimeout(() => go(cur + 1), 1300);
+}
+function showResult(a, b) { $('#result').innerHTML = a + (b ? `<small>${b}</small>` : ''); }
+
+// ───────── 소리 ─────────
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR'; u.rate = 0.85;
+  const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith('ko'));
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+// ───────── 화면 갱신 ─────────
+const MODE_HELP = {
+  trace: '흐린 본보기 위에 그대로 따라 써 보세요.',
+  copy: '위의 본보기를 보면서 빈 칸에 써 보세요.',
+  test: '훈과 음만 보고 기억해서 써 보세요. 채점하면 정답이 나타나요.',
+};
+function renderAll() {
+  const c = CHARS[cur], p = PHRASES[c.pi], hide = mode === 'test' && !revealed;
+  $('#cat').textContent = p.cat;
+  $('#strip').innerHTML = idxsOf(p).map(idx => {
+    const me = idx === cur;
+    return `<div class="cell ${me ? 'on' : ''} ${isDone(idx) ? 'ok' : ''}" data-i="${idx}">
+      <div class="c">${me && hide ? '?' : CHARS[idx].ch}</div><div class="e">${CHARS[idx].say}</div></div>`;
+  }).join('');
+  const big = $('#big');
+  big.textContent = hide ? '?' : c.ch;
+  big.classList.toggle('q', hide);
+  $('#hun').innerHTML = `${c.hun} <em>${c.eum}</em>`;
+  const r = progress[cur];
+  $('#meta').textContent = `${hide ? '' : p.chars + ' '}${p.read} — ${p.mean}` + (r ? ` · 최고 ${r.best}점` : '');
+  $('#modes').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+  $('#modeHelp').textContent = MODE_HELP[mode];
+  $('#alpha').disabled = mode !== 'trace';
+
+  const done = CHARS.filter((_, i) => isDone(i)).length;
+  $('#barFill').style.width = done / TOTAL * 100 + '%';
+  $('#progTxt').textContent = `완료 ${done} / ${TOTAL}`;
+  const tries = Object.values(progress).reduce((a, r) => a + r.tries, 0);
+  const scores = Object.values(progress).map(r => r.best);
+  const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  $('#stats').textContent = `연습한 글자 ${scores.length}자 · 총 ${tries}회 채점 · 평균 최고점 ${avg}점`;
+  renderList();
+}
+
+function renderList() {
+  const q = $('#q').value.trim(), f = $('#filter').value, cs = $('#catSel').value;
+  const html = [];
+  let lastCat = '';
+  PHRASES.forEach((p, pi) => {
+    const idxs = idxsOf(p);
+    if (cs && p.cat !== cs) return;
+    if (q && !idxs.some(i => { const c = CHARS[i]; return c.ch === q || c.hun.includes(q) || c.eum === q; })
+          && !p.read.includes(q) && !p.chars.includes(q) && !p.mean.includes(q)) return;
+    const dn = idxs.filter(isDone).length;
+    if (f === 'done' && dn < p.len) return;
+    if (f === 'todo' && dn === p.len) return;
+    if (p.cat !== lastCat) { html.push(`<h3>${p.cat}</h3>`); lastCat = p.cat; }
+    html.push(`<div class="ph ${CHARS[cur].pi === pi ? 'cur' : ''}" data-i="${p.start}">
+      <span class="cs">${idxs.map(i => `<s class="${isDone(i) ? 'ok' : ''}" data-i="${i}">${CHARS[i].ch}</s>`).join('')}</span>
+      <span class="rd">${p.read}<small>${p.mean}</small></span></div>`);
+  });
+  $('#list').innerHTML = html.join('') || '<p class="help" style="padding:10px">검색 결과가 없어요.</p>';
+}
+
+function go(i) {
+  cur = (i + TOTAL) % TOTAL;
+  strokes = []; revealed = false; showResult('', '');
+  try { localStorage.setItem(STORE + '-cur', cur); } catch (e) {}
+  drawBg(); redrawInk(); renderAll();
+  const el = $('#list .ph.cur'); if (el) el.scrollIntoView({ block: 'nearest' });
+  // 글꼴이 늦게 읽히면 본보기를 다시 그림
+  if (document.fonts) document.fonts.load(`40px "Noto Serif KR"`, CHARS[cur].ch).then(drawBg).catch(() => {});
+}
+
+// ───────── 이벤트 ─────────
+$('#listTitle').textContent = `생활한자 ${PHRASES.length}낱말 · ${TOTAL}자`;
+$('#catSel').innerHTML += CATS.map(c => `<option>${c}</option>`).join('');
+$('#prev').onclick = () => go(cur - 1);
+$('#next').onclick = () => go(cur + 1);
+$('#undo').onclick = () => { strokes.pop(); redrawInk(); };
+$('#clear').onclick = () => { strokes = []; redrawInk(); showResult('', ''); };
+$('#grade').onclick = grade;
+$('#say').onclick = () => speak(`${CHARS[cur].hun} ${CHARS[cur].eum}`);
+$('#sayPhrase').onclick = () => { const p = PHRASES[CHARS[cur].pi]; speak(p.read + '. ' + idxsOf(p).map(i => `${CHARS[i].hun} ${CHARS[i].eum}`).join(', ') + '. ' + p.mean); };
+$('#reveal').onclick = () => { revealed = !revealed; drawBg(); renderAll(); };
+$('#rand').onclick = () => {
+  const todo = CHARS.map((_, i) => i).filter(i => !isDone(i));
+  if (!todo.length) { showResult(`🏆 ${TOTAL}자를 모두 완료했어요!`, ''); return; }
+  go(todo[Math.floor(Math.random() * todo.length)]);
+};
+$('#modes').onclick = e => {
+  const m = e.target.dataset.m; if (!m) return;
+  mode = m; revealed = false;
+  try { localStorage.setItem(STORE + '-mode', mode); } catch (err) {}
+  drawBg(); renderAll();
+};
+$('#alpha').oninput = drawBg;
+$('#strip').onclick = e => { const el = e.target.closest('[data-i]'); if (el) go(+el.dataset.i); };
+$('#list').onclick = e => {
+  const el = e.target.closest('[data-i]'); if (!el) return;
+  go(+el.dataset.i); $('#aside').classList.remove('open');
+};
+$('#q').oninput = renderList;
+$('#filter').onchange = renderList;
+$('#catSel').onchange = renderList;
+$('#menuBtn').onclick = () => $('#aside').classList.toggle('open');
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === 'ArrowRight') go(cur + 1);
+  else if (e.key === 'Enter') { e.preventDefault(); grade(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); strokes.pop(); redrawInk(); }
+  else if (e.key === 'Delete' || e.key === 'Backspace') { strokes = []; redrawInk(); showResult('', ''); }
+});
+
+new ResizeObserver(resize).observe($('#board'));
+if ('speechSynthesis' in window) speechSynthesis.getVoices();
+go(cur);
+</script>
+<script>
+// ───────── 앱 기능: 오프라인 설치, 화면 켜 두기 ─────────
+// 서비스 워커를 등록하면 한 번 연 뒤로는 인터넷 없이도 실행된다.
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+// 연습하는 동안 화면이 꺼지지 않게 한다 (앱이 다시 보일 때마다 다시 요청).
+(() => {
+  const box = document.getElementById('awake');
+  let lock = null;
+  try { box.checked = localStorage.getItem('daily-hanja-awake') !== '0'; } catch (e) {}
+  const want = async () => {
+    if (!box.checked || !('wakeLock' in navigator) || document.visibilityState !== 'visible' || lock) return;
+    try { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } catch (e) {}
+  };
+  box.addEventListener('change', () => {
+    try { localStorage.setItem('daily-hanja-awake', box.checked ? '1' : '0'); } catch (e) {}
+    if (box.checked) want(); else if (lock) lock.release();
+  });
+  document.addEventListener('visibilitychange', want);
+  document.addEventListener('pointerdown', want, { once: true });
+  want();
+})();
+</script>
+</body>
+</html>
