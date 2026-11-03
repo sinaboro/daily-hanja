@@ -115,7 +115,25 @@
   .wide{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px;font-weight:700}
   .stats{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
   .help{font-size:12px;color:var(--muted)}
+  /* 앱 설치 버튼·안내 */
+  #installBtn{border:0;background:var(--red);color:#fff;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+  #installBtn[hidden],#inapp[hidden]{display:none}
+  #inapp{width:100%;background:#fff4d6;border:1px solid #e9c46a;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5}
+  #inapp a{display:inline-block;margin-top:6px;background:var(--accent);color:#fff;border-radius:999px;padding:7px 14px;font-weight:700;text-decoration:none}
+  #appHelp{background:var(--accent2);border-radius:10px;padding:10px 12px;line-height:1.6}
+  #appHelp b{color:var(--ink)}
 
+  /* 폴드 접은 화면처럼 좁은 폭: 제목·버튼을 줄이고 주제 표시는 목록에서만 */
+  header h1{white-space:nowrap}
+  @media (max-width:380px){
+    header h1{font-size:16px;letter-spacing:0}
+    #installBtn{padding:8px 10px;font-size:12px}
+    #installBtn .long{display:none}
+    #cat{display:none}
+    .cell{width:44px}
+    .dock{gap:4px;padding-left:6px;padding-right:6px}
+    .dock button{font-size:11px;white-space:nowrap}
+  }
   @media (min-width:700px){ main{max-width:640px;margin:0 auto} .sheet{max-width:640px;margin:0 auto} }
   @media (orientation:landscape) and (max-height:500px){
     main{display:grid;grid-template-columns:auto 1fr;align-items:start;gap:10px}
@@ -130,12 +148,16 @@
   <div class="hrow">
     <button class="icon" id="menuBtn" aria-label="목록">☰</button>
     <h1><span>生活漢字</span> 따라쓰기</h1>
+    <button id="installBtn" hidden>⬇ <span class="long">앱 </span>설치</button>
     <button class="icon" id="setBtn" aria-label="설정">⚙</button>
   </div>
   <div class="prog"><div class="bar"><i id="barFill"></i></div><b id="progTxt"></b></div>
 </header>
 
 <main>
+  <div id="inapp" hidden>카카오톡 안의 브라우저에서는 앱을 설치할 수 없어요.<br>
+    <b>Chrome으로 열어서</b> 설치해 주세요.<br>
+    <a id="openChrome" href="#">Chrome으로 열기</a></div>
   <div class="strip">
     <span id="cat"></span>
     <div id="strip"></div>
@@ -204,6 +226,7 @@
     <label class="chk"><input type="checkbox" id="awake" checked> 연습하는 동안 화면 켜 두기</label>
     <button class="wide" id="rand">🎲 미완료 글자 무작위 연습</button>
     <div class="stats" id="stats"></div>
+    <div class="help" id="appHelp"></div>
   </div>
 </section>
 
@@ -664,6 +687,43 @@ go(cur);
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+// 앱 설치: 브라우저가 설치 가능하다고 알려 주면 위쪽에 [앱 설치] 버튼을 띄운다.
+// (Chrome의 아래쪽 설치 안내는 뜨지 않을 때가 많아서 직접 버튼을 둔다)
+(() => {
+  const btn = document.getElementById('installBtn'), help = document.getElementById('appHelp');
+  const ua = navigator.userAgent;
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
+  let deferred = null;
+
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; btn.hidden = false; });
+  btn.addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice.catch(() => {});
+    deferred = null; btn.hidden = true;
+  });
+  addEventListener('appinstalled', () => { btn.hidden = true; help.innerHTML = '✅ 설치되었어요. 홈 화면이나 앱스 화면의 <b>생활한자</b> 아이콘으로 실행하세요.'; });
+
+  // 카카오톡 등 앱 안의 브라우저: Chrome으로 여는 버튼을 보여 준다 (안드로이드)
+  if (inApp && !standalone) {
+    document.getElementById('inapp').hidden = false;
+    const a = document.getElementById('openChrome');
+    if (/Android/i.test(ua)) {
+      a.href = `intent://${location.host}${location.pathname}#Intent;scheme=https;package=com.android.chrome;end`;
+    } else {
+      a.textContent = '오른쪽 아래 ⋯ → Safari로 열기';
+      a.removeAttribute('href');
+    }
+  }
+
+  // 설정 화면에 브라우저별 설치 방법을 적어 둔다
+  help.innerHTML = standalone ? '✅ 앱으로 실행 중이에요.'
+    : inApp ? '📲 <b>앱 설치:</b> 카카오톡 안의 브라우저에서는 설치할 수 없어요. 오른쪽 위 <b>⋮ → 다른 브라우저로 열기 → Chrome</b>을 고른 뒤 설치하세요.'
+    : /iPhone|iPad|iPod/i.test(ua) ? '📲 <b>앱 설치:</b> Safari 아래쪽 <b>공유 버튼(네모 위 화살표) → 홈 화면에 추가</b>'
+    : /SamsungBrowser/i.test(ua) ? '📲 <b>앱 설치:</b> 주소창의 <b>설치 아이콘</b>을 누르거나, 아래 <b>≡ 메뉴 → 현재 페이지 추가 → 홈 화면</b>'
+    : '📲 <b>앱 설치:</b> 위쪽 <b>⬇ 앱 설치</b> 버튼이 없으면 오른쪽 위 <b>⋮ 메뉴 → 앱 설치</b>(또는 <b>홈 화면에 추가 → 설치</b>)를 누르세요.';
+})();
 // 연습하는 동안 화면이 꺼지지 않게 한다 (앱이 다시 보일 때마다 다시 요청).
 (() => {
   const box = document.getElementById('awake');
