@@ -65,7 +65,18 @@
   .seg button{flex:1;border:0;background:transparent;padding:10px 4px;font-size:14px;font-weight:700;color:var(--muted)}
   .seg button+button{border-left:1px solid var(--line)}
   .seg button.on{background:var(--accent);color:#fff}
-  #modeHelp{font-size:12px;color:var(--muted);margin:-4px 0 0;text-align:center}
+  .mh{font-size:12px;color:var(--muted);margin:-4px 0 0;text-align:center}
+  #helpLink{border:0;background:none;padding:2px 4px;font-size:12px;font-weight:700;color:var(--accent);text-decoration:underline}
+  /* 사용법 시트 */
+  #guide{height:88vh}
+  @supports (height:100dvh){ #guide{height:88dvh} }
+  #guide .gbody{overflow:auto;flex:1;padding:0 16px 20px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px}
+  .gsec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.65}
+  .gsec h3{margin:0 0 4px;font-size:15px;color:var(--accent)}
+  .gsec ul,.gsec ol{margin:0;padding-left:20px}
+  .gsec li+li{margin-top:3px}
+  .gsec p{margin:0}
+  .gsec kbd{display:inline-block;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:0 6px;font:inherit;font-size:12.5px;font-weight:700}
 
   .board{position:relative;width:min(100%, calc(100vh - 360px));min-width:260px;max-width:560px;aspect-ratio:1;border-radius:6px;box-shadow:0 2px 10px rgba(60,40,10,.12)}
   @supports (height:100dvh){ .board{width:min(100%, calc(100dvh - 360px))} }
@@ -181,7 +192,7 @@
     <button data-m="copy">보고쓰기</button>
     <button data-m="test">외워쓰기</button>
   </div>
-  <p id="modeHelp"></p>
+  <p class="mh"><span id="modeHelp"></span> <button id="helpLink">사용법 ›</button></p>
 
   <div class="board" id="board">
     <canvas id="bg"></canvas>
@@ -225,8 +236,45 @@
     <label class="chk"><input type="checkbox" id="vibe" checked> 채점할 때 진동</label>
     <label class="chk"><input type="checkbox" id="awake" checked> 연습하는 동안 화면 켜 두기</label>
     <button class="wide" id="rand">🎲 미완료 글자 무작위 연습</button>
+    <button class="wide" id="helpBtn">📖 사용법 보기</button>
     <div class="stats" id="stats"></div>
     <div class="help" id="appHelp"></div>
+  </div>
+</section>
+
+<section class="sheet" id="guide">
+  <div class="grab"></div>
+  <div class="shead"><h2>📖 사용법</h2><button class="icon" data-close aria-label="닫기">✕</button></div>
+  <div class="gbody">
+    <div class="gsec"><h3>✍️ 이렇게 연습해요</h3><ol>
+      <li>위쪽 칸에서 연습할 <b>글자</b>를 고릅니다. (☰ 목록에서 낱말을 골라도 돼요)</li>
+      <li>아래 <b>바둑판 칸 안에</b> 손가락으로 글자를 씁니다.</li>
+      <li><b>✔ 채점하기</b>를 누르면 점수와 함께 정답 글자가 빨갛게 겹쳐 보입니다.</li>
+      <li><b>70점 이상</b>이면 그 글자는 <b style="color:var(--done)">완료</b>(초록색)가 됩니다.</li></ol></div>
+    <div class="gsec"><h3>🔀 세 가지 연습 방법</h3><ul>
+      <li><b>따라쓰기</b> — 흐린 본보기 글자 위에 그대로 덧씁니다. 처음 배울 때.</li>
+      <li><b>보고쓰기</b> — 위쪽 큰 글자를 보면서 빈 칸에 씁니다.</li>
+      <li><b>외워쓰기</b> — 글자를 숨기고 <b>훈과 음</b>만 보여 줍니다. 기억해서 쓰고, 채점하면 정답이 나와요.</li></ul></div>
+    <div class="gsec"><h3>💯 점수 보는 법</h3><ul>
+      <li><b>획 채움</b> — 본보기의 획을 얼마나 빠짐없이 썼는지</li>
+      <li><b>정확도</b> — 쓴 획이 본보기 안쪽에 얼마나 들어갔는지</li>
+      <li>칸을 꽉 채울 만큼 <b>크게</b>, 가운데에 맞춰 쓰면 점수가 잘 나와요. 획 순서는 채점하지 않아요.</li></ul></div>
+    <div class="gsec"><h3>🔘 버튼</h3><ul>
+      <li><b>◀ ▶</b> 이전·다음 글자 — 위쪽 큰 글자 카드를 <b>좌우로 밀어도</b> 넘어가요.</li>
+      <li><b>↶ 되돌리기</b> 마지막 획만 지우기 · <b>✕ 지우기</b> 모두 지우기</li>
+      <li><b>🔊 훈음</b> 글자의 훈과 음 듣기 · 위쪽 <b>🔊</b> 낱말 전체와 뜻 듣기</li>
+      <li><b>👁 정답</b> 정답 글자를 빨갛게 보이기/숨기기</li></ul></div>
+    <div class="gsec"><h3>☰ 목록 · ⚙ 설정</h3><ul>
+      <li><b>☰ 목록</b>: 주제별 낱말 목록. 한자·훈·음·뜻으로 <b>검색</b>하고, <b>미완료</b>만 골라 볼 수 있어요.</li>
+      <li><b>⚙ 설정</b>: 본보기 농도, 붓 굵기, 자동으로 다음 글자, 진동, 화면 켜 두기, <b>🎲 미완료 글자 무작위 연습</b></li>
+      <li>설정과 진도는 이 폰에 저장되고, 앱이 업데이트돼도 그대로 남아요.</li></ul></div>
+    <div class="gsec"><h3>📲 앱 설치 · 오프라인</h3><ul>
+      <li id="guideInstall"></li>
+      <li>설치 후 인터넷이 될 때 <b>한 번 열어 두면</b> 비행기 모드에서도 열립니다.</li>
+      <li>새 한자가 추가되면 인터넷이 될 때 앱을 열면 <b>자동으로 업데이트</b>됩니다.</li></ul></div>
+    <div class="gsec"><h3>⌨️ PC에서 쓸 때</h3><p>
+      <kbd>←</kbd> <kbd>→</kbd> 이전·다음 · <kbd>Enter</kbd> 채점 · <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기 · <kbd>Delete</kbd> 지우기</p></div>
+    <p class="help" style="text-align:center"><a href="https://github.com/sinaboro/daily-hanja" style="color:inherit">자세한 안내 (GitHub)</a></p>
   </div>
 </section>
 
@@ -239,6 +287,18 @@
   const closeAll = () => { sheets.forEach(s => s.classList.remove('open')); dim.classList.remove('open'); };
   const open = id => { closeAll(); $id(id).classList.add('open'); dim.classList.add('open'); };
   $id('setBtn').addEventListener('click', () => open('settings'));
+  // 사용법: 모드 설명 옆 [사용법 ›], 설정의 [📖 사용법 보기], 처음 실행할 때 자동으로
+  $id('helpLink').addEventListener('click', () => open('guide'));
+  $id('helpBtn').addEventListener('click', () => open('guide'));
+  $id('guideInstall').innerHTML = (matchMedia('(display-mode: standalone)').matches || navigator.standalone)
+    ? '✅ 지금 <b>앱으로 실행 중</b>이에요.'
+    : 'Chrome: 위쪽 <b>⬇ 앱 설치</b> 또는 <b>⋮ → 앱 설치</b> · 아이폰 Safari: <b>공유 → 홈 화면에 추가</b>';
+  try {
+    if (!localStorage.getItem('daily-hanja-help-seen')) {
+      localStorage.setItem('daily-hanja-help-seen', '1');
+      setTimeout(() => open('guide'), 400);
+    }
+  } catch (e) {}
   $id('menuBtn').addEventListener('click', e => {
     e.stopImmediatePropagation(); open('aside');
     setTimeout(() => { const el = document.querySelector('#list .ph.cur'); if (el) el.scrollIntoView({ block: 'center' }); }, 260);
@@ -693,9 +753,23 @@ document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.key === 'ArrowLeft') go(cur - 1);
   else if (e.key === 'ArrowRight') go(cur + 1);
-  else if (e.key === 'Enter') { e.preventDefault(); grade(); }
+  // 버튼에 초점이 있을 때 Enter는 그 버튼을 누르는 것이므로 채점을 한 번 더 하지 않는다
+  else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); grade(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); strokes.pop(); redrawInk(); }
   else if (e.key === 'Delete' || e.key === 'Backspace') { strokes = []; redrawInk(); showResult('', ''); }
+});
+
+// 설정 기억하기: 본보기 농도·붓 굵기·자동 다음·진동을 이 폰에 저장해 두고 다음에 열 때 되살린다
+const SET_KEY = 'daily-hanja-settings';
+const SET_IDS = ['alpha', 'brush', 'autoNext', 'vibe'];
+try {
+  const saved = JSON.parse(localStorage.getItem(SET_KEY) || '{}');
+  for (const id of SET_IDS) if (id in saved) { const el = $('#' + id); if (el.type === 'checkbox') el.checked = saved[id]; else el.value = saved[id]; }
+} catch (e) {}
+for (const id of SET_IDS) $('#' + id).addEventListener('change', () => {
+  const v = {};
+  for (const k of SET_IDS) { const el = $('#' + k); v[k] = el.type === 'checkbox' ? el.checked : el.value; }
+  try { localStorage.setItem(SET_KEY, JSON.stringify(v)); } catch (e) {}
 });
 
 new ResizeObserver(resize).observe($('#board'));
