@@ -156,7 +156,7 @@
 
 <main>
   <div id="inapp" hidden>카카오톡 안의 브라우저에서는 앱을 설치할 수 없어요.<br>
-    <b>Chrome으로 열어서</b> 설치해 주세요.<br>
+    <b>바깥 브라우저(Chrome·Safari)로 열어서</b> 설치해 주세요.<br>
     <a id="openChrome" href="#">Chrome으로 열기</a></div>
   <div class="strip">
     <span id="cat"></span>
@@ -705,15 +705,26 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   });
   addEventListener('appinstalled', () => { btn.hidden = true; help.innerHTML = '✅ 설치되었어요. 홈 화면이나 앱스 화면의 <b>생활한자</b> 아이콘으로 실행하세요.'; });
 
-  // 카카오톡 등 앱 안의 브라우저: Chrome으로 여는 버튼을 보여 준다 (안드로이드)
+  // 카카오톡 등 앱 안의 브라우저: 바깥 브라우저(Chrome·Safari)로 넘긴다.
+  // 카카오톡은 처음 한 번 자동으로 넘기고, 안 넘어가면 버튼으로 다시 시도한다.
   if (inApp && !standalone) {
+    const kakao = /KAKAOTALK/i.test(ua), android = /Android/i.test(ua), ios = /iPhone|iPad|iPod/i.test(ua);
+    const url = location.href.split('#')[0];
+    const outside = kakao ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url)
+      : android ? `intent://${location.host}${location.pathname}#Intent;scheme=https;package=com.android.chrome;end` : '';
     document.getElementById('inapp').hidden = false;
     const a = document.getElementById('openChrome');
-    if (/Android/i.test(ua)) {
-      a.href = `intent://${location.host}${location.pathname}#Intent;scheme=https;package=com.android.chrome;end`;
+    if (outside) {
+      a.href = outside;
+      if (ios) a.textContent = 'Safari로 열기';
     } else {
       a.textContent = '오른쪽 아래 ⋯ → Safari로 열기';
       a.removeAttribute('href');
+    }
+    if (kakao) {
+      let jumped = false;
+      try { jumped = sessionStorage.getItem('kakaoJump') === '1'; sessionStorage.setItem('kakaoJump', '1'); } catch (e) {}
+      if (!jumped) setTimeout(() => { location.href = outside; }, 300);
     }
   }
 

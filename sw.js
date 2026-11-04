@@ -1,6 +1,6 @@
 // 서비스 워커: 앱 파일을 폰에 저장해 두고 인터넷 없이도 실행되게 한다.
 // 앱 내용을 고치면 VERSION 숫자를 올려야 폰에서 새 버전을 받는다.
-const VERSION = 'daily-hanja-v2';
+const VERSION = 'daily-hanja-v3';
 const FILES = ['./', 'index.html', 'manifest.json', 'fonts/NotoSerifKR-subset.woff2', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 // 설치할 때 파일을 모두 캐시에 담는다
