@@ -147,12 +147,26 @@
 | `manifest.json` | 앱 이름·아이콘·전체 화면 설정 |
 | `sw.js` | 오프라인 캐시 (내용을 고치면 `VERSION`을 올릴 것) |
 | `fonts/` | 쓰인 한자만 담은 Noto Serif KR 글꼴 (SIL OFL 1.1) |
+| `tools/build_font.py` | 낱말 데이터 검사 + 글꼴 다시 만들기 + `VERSION` 올리기 |
+| `tools/make_icons.py` | 앱 아이콘(빨간 바탕 '漢') 다시 만들기 |
 
 ### 낱말(한자)을 추가할 때
 1. `index.html`의 `RAW`에서 원하는 주제(`# 주제`) 아래 **아무 위치에나** `한자|읽기|훈음|뜻` 한 줄을 넣습니다.
    - 진도 기록은 "낱말:몇 번째 글자"(예: `學校:0`)로 저장되므로, 중간에 끼워 넣어도 기존 기록이 밀리지 않습니다.
    - 이미 있는 낱말의 **한자를 바꾸면** 그 낱말의 기록은 새 낱말로 취급되어 처음부터 시작합니다.
-2. 새 한자가 들어가도록 `fonts/NotoSerifKR-subset.woff2`를 다시 만듭니다. (없으면 그 글자만 다른 글꼴로 보이고 채점이 어긋납니다)
-3. `sw.js`의 `VERSION` 숫자를 올립니다. (예: `daily-hanja-v4` → `daily-hanja-v5`)
-4. GitHub에 올리면, 앱을 설치한 사람은 **인터넷이 될 때 앱을 열면 자동으로** 새 버전을 받습니다.
+2. 저장소 맨 위 폴더에서 도구를 실행합니다. 데이터 검사, 글꼴 다시 만들기, `sw.js`의 `VERSION` 올리기를 한 번에 합니다.
+   ```bash
+   pip install -r tools/requirements.txt
+   python tools/build_font.py --bump
+   ```
+   - 처음 실행할 때 원본 글꼴(약 23MB)을 `tools/.cache/`에 내려받습니다. (git에는 올라가지 않음)
+   - 칸 수가 틀리거나 훈음에 띄어쓰기가 없으면 **오류를 알려 주고 멈춥니다.** 고친 뒤 다시 실행하세요.
+   - 검사만 하려면 `python tools/build_font.py --check`
+3. GitHub에 올리면, 앱을 설치한 사람은 **인터넷이 될 때 앱을 열면 자동으로** 새 버전을 받습니다.
    보통 한 번 열면 새 낱말이 보이고, 한 번 더 열면 새 글꼴까지 적용됩니다.
+
+### 다른 PC에서 이어서 작업하기
+```bash
+git clone https://github.com/sinaboro/daily-hanja
+```
+받은 폴더에서 위 2번부터 그대로 하면 됩니다. 필요한 것은 Python 3과 git뿐입니다.
