@@ -1,11 +1,14 @@
 // 서비스 워커: 앱 파일을 폰에 저장해 두고 인터넷 없이도 실행되게 한다.
 // 앱 내용을 고치면 VERSION 숫자를 올려야 폰에서 새 버전을 받는다.
-const VERSION = 'daily-hanja-v3';
+const VERSION = 'daily-hanja-v4';
 const FILES = ['./', 'index.html', 'manifest.json', 'fonts/NotoSerifKR-subset.woff2', 'icons/icon-192.png', 'icons/icon-512.png'];
 
-// 설치할 때 파일을 모두 캐시에 담는다
+// 설치할 때 파일을 모두 캐시에 담는다.
+// cache:'reload'로 브라우저 임시 저장본을 건너뛰고 서버에서 새로 받는다 (새 글꼴이 바로 들어오게).
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION)
+    .then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 // 옛 버전 캐시는 지운다
